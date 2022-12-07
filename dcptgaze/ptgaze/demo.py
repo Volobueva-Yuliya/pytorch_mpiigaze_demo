@@ -79,6 +79,7 @@ class Demo:
             self.writer.release()
 
     def _process_image(self, image) -> None:
+        global pose_pitch, pose_yaw, gaze_pitch, gaze_yaw
         undistorted = cv2.undistort(
             image, self.gaze_estimator.camera.camera_matrix,
             self.gaze_estimator.camera.dist_coefficients)
@@ -88,16 +89,17 @@ class Demo:
         for face in faces:
             self.gaze_estimator.estimate_gaze(undistorted, face)
             self._draw_face_bbox(face)
-            self._draw_head_pose(face)
+            pose_pitch, pose_yaw  = self._draw_head_pose(face)
             self._draw_landmarks(face)
             self._draw_face_template_model(face)
-            self._draw_gaze_vector(face)
+            gaze_pitch, gaze_yaw = self._draw_gaze_vector(face)
             self._display_normalized_image(face)
 
         if self.config.demo.use_camera:
             self.visualizer.image = self.visualizer.image[:, ::-1]
         if self.writer:
             self.writer.write(self.visualizer.image)
+        return round(gaze_pitch, 2), round(gaze_yaw, 2), round(pose_pitch, 2), round(pose_yaw, 2)
 
     def _create_capture(self) -> Optional[cv2.VideoCapture]:
         if self.config.demo.image_path:
@@ -182,9 +184,10 @@ class Demo:
         self.visualizer.draw_model_axes(face, length, lw=2)
 
         euler_angles = face.head_pose_rot.as_euler('XYZ', degrees=True)
-        pitch, yaw, roll = face.change_coordinate_system(euler_angles)
-        logger.info(f'[head] pitch: {pitch:.2f}, yaw: {yaw:.2f}, '
-                    f'roll: {roll:.2f}, distance: {face.distance:.2f}')
+        pose_pitch, pose_yaw, roll = face.change_coordinate_system(euler_angles)
+        # logger.info(f'[head] pose_pitch: {pose_pitch:.2f}, pose_yaw: {pose_yaw:.2f}')
+        # print(f'[head] pitch: {pitch:.2f}, yaw: {yaw:.2f}')
+        return pose_pitch, pose_yaw
 
     def _draw_landmarks(self, face: Face) -> None:
         if not self.show_landmarks:
@@ -230,7 +233,9 @@ class Demo:
         elif self.config.mode in ['MPIIFaceGaze', 'ETH-XGaze']:
             self.visualizer.draw_3d_line(
                 face.center, face.center + length * face.gaze_vector)
-            pitch, yaw = np.rad2deg(face.vector_to_angle(face.gaze_vector))
-            logger.info(f'[face] pitch: {pitch:.2f}, yaw: {yaw:.2f}')
+            gaze_pitch, gaze_yaw = np.rad2deg(face.vector_to_angle(face.gaze_vector))
+            # logger.info(f'[face] gaze_pitch: {gaze_pitch:.2f}, gaze_yaw: {gaze_yaw:.2f}')
         else:
             raise ValueError
+        # print(f'[face] gaze_pitch: {gaze_pitch:.2f}, gaze_yaw: {gaze_yaw:.2f}')
+        return gaze_pitch, gaze_yaw
