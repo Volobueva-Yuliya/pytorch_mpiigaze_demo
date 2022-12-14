@@ -11,6 +11,8 @@ from .common import Face, FacePartsName, Visualizer
 from .gaze_estimator import GazeEstimator
 from .utils import get_3d_face_model
 
+from kasane.fshd.FSHDIMG import FSHDJPG
+
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
@@ -79,13 +81,38 @@ class Demo:
             self.writer.release()
 
     def _process_image(self, image) -> None:
+        
         global pose_pitch, pose_yaw, gaze_pitch, gaze_yaw
-        undistorted = cv2.undistort(
-            image, self.gaze_estimator.camera.camera_matrix,
-            self.gaze_estimator.camera.dist_coefficients)
-
+        
+        img = FSHDJPG.load(image)
+        
+        image = cv2.imread(image)
         self.visualizer.set_image(image.copy())
-        faces = self.gaze_estimator.detect_faces(undistorted)
+
+        if self.config.face_detector.mode == 'fshdjpg':
+            undistorted = cv2.undistort(
+            img.get_img(), self.gaze_estimator.camera.camera_matrix,
+            self.gaze_estimator.camera.dist_coefficients
+            )
+        else:
+            undistorted = cv2.undistort(
+                image, self.gaze_estimator.camera.camera_matrix,
+                self.gaze_estimator.camera.dist_coefficients
+            )
+
+        if self.config.face_detector.mode == 'fshdjpg':
+            faces = self.gaze_estimator.detect_faces(img)
+        else:
+            faces = self.gaze_estimator.detect_faces(undistorted)
+        
+        
+#         undistorted = cv2.undistort(
+#             image, self.gaze_estimator.camera.camera_matrix,
+#             self.gaze_estimator.camera.dist_coefficients)
+
+#         self.visualizer.set_image(image.copy())
+#         faces = self.gaze_estimator.detect_faces(undistorted)
+
         for face in faces:
             self.gaze_estimator.estimate_gaze(undistorted, face)
             self._draw_face_bbox(face)

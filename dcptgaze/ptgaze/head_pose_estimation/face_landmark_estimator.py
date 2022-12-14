@@ -7,6 +7,8 @@ import mediapipe
 import numpy as np
 from omegaconf import DictConfig
 
+from kasane.fshd.FSHDIMG import FSHDJPG
+
 from ..common import Face
 
 
@@ -36,6 +38,8 @@ class LandmarkEstimator:
                 max_num_faces=config.face_detector.mediapipe_max_num_faces,
                 static_image_mode=config.face_detector.
                 mediapipe_static_image_mode)
+        elif self.mode == 'fshdjpg':
+            print('ok')
         else:
             raise ValueError
 
@@ -48,8 +52,18 @@ class LandmarkEstimator:
             return self._detect_faces_face_alignment_sfd(image)
         elif self.mode == 'mediapipe':
             return self._detect_faces_mediapipe(image)
+        elif self.mode == 'fshdjpg':
+            return self._detect_faces_fshdjpg(image)
         else:
             raise ValueError
+            
+    def _detect_faces_fshdjpg(self, image: np.ndarray) -> List[Face]:
+        detected = []
+        bbox = image.get_source_rect()
+        bbox = np.round(bbox).astype(np.int32)
+        landmarks = image.get_landmarks()
+        detected.append(Face(bbox, landmarks))
+        return detected
 
     def _detect_faces_dlib(self, image: np.ndarray) -> List[Face]:
         bboxes = self.detector(image[:, :, ::-1], 0)
