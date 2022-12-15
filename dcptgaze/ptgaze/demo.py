@@ -104,14 +104,6 @@ class Demo:
             faces = self.gaze_estimator.detect_faces(img)
         else:
             faces = self.gaze_estimator.detect_faces(undistorted)
-        
-        
-#         undistorted = cv2.undistort(
-#             image, self.gaze_estimator.camera.camera_matrix,
-#             self.gaze_estimator.camera.dist_coefficients)
-
-#         self.visualizer.set_image(image.copy())
-#         faces = self.gaze_estimator.detect_faces(undistorted)
 
         for face in faces:
             self.gaze_estimator.estimate_gaze(undistorted, face)

@@ -39,7 +39,7 @@ class LandmarkEstimator:
                 static_image_mode=config.face_detector.
                 mediapipe_static_image_mode)
         elif self.mode == 'fshdjpg':
-            print('ok')
+            pass
         else:
             raise ValueError
 

@@ -3,12 +3,12 @@ device: cuda
 model:
   name: resnet18
 face_detector:
-  mode: mediapipe
-  dlib_model_path: .ptgaze/dlib/shape_predictor_68_face_landmarks.dat
+  mode: fshdjpg
+  dlib_model_path: ./.ptgaze/dlib/shape_predictor_68_face_landmarks.dat
   mediapipe_max_num_faces: 3
   mediapipe_static_image_mode: false
 gaze_estimator:
-  checkpoint: .ptgaze/models/eth-xgaze_resnet18.pth
+  checkpoint: ./.ptgaze/models/eth-xgaze_resnet18.pth
   camera_params: ${PACKAGE_ROOT}/ptgaze/data/calib/sample_params.yaml
   use_dummy_camera_params: false
   normalized_camera_params: ${PACKAGE_ROOT}/ptgaze/data/normalized_camera_params/eth-xgaze.yaml
@@ -24,7 +24,7 @@ demo:
   output_file_extension: avi
   head_pose_axis_length: 0.05
   gaze_visualization_length: 0.05
-  show_bbox: true
+  show_bbox: false
   show_head_pose: true
   show_landmarks: false
   show_normalized_image: false
