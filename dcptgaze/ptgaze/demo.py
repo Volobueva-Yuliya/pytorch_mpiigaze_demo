@@ -84,26 +84,20 @@ class Demo:
         
         global pose_pitch, pose_yaw, gaze_pitch, gaze_yaw
         
-        img = FSHDJPG.load(image)
-        
-        image = cv2.imread(image)
-        self.visualizer.set_image(image.copy())
-
         if self.config.face_detector.mode == 'fshdjpg':
             undistorted = cv2.undistort(
-            img.get_img(), self.gaze_estimator.camera.camera_matrix,
+            image.get_img(), self.gaze_estimator.camera.camera_matrix,
             self.gaze_estimator.camera.dist_coefficients
             )
+            faces = self.gaze_estimator.detect_faces(image)
+            self.visualizer.set_image(image.get_img())
         else:
             undistorted = cv2.undistort(
                 image, self.gaze_estimator.camera.camera_matrix,
                 self.gaze_estimator.camera.dist_coefficients
             )
-
-        if self.config.face_detector.mode == 'fshdjpg':
-            faces = self.gaze_estimator.detect_faces(img)
-        else:
             faces = self.gaze_estimator.detect_faces(undistorted)
+            self.visualizer.set_image(image.copy())
 
         for face in faces:
             self.gaze_estimator.estimate_gaze(undistorted, face)
