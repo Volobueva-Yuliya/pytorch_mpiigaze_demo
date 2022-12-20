@@ -2,16 +2,24 @@ import bz2
 import logging
 import operator
 import pathlib
+from pathlib import Path
 import tempfile
 
 import cv2
 import torch.hub
 import yaml
-from omegaconf import DictConfig
+from omegaconf import DictConfig, OmegaConf
 
 from .common.face_model import FaceModel
 from .common.face_model_68 import FaceModel68
 from .common.face_model_mediapipe import FaceModelMediaPipe
+
+import fsspec
+from skimage import io 
+from kasane.fshd.FSHDIMG import FSHDJPG
+import dcptgaze
+from dcptgaze.ptgaze.demo import Demo
+from kasane.utils.io import generate_presigned_url_from_path, get_filesystem_from_path
 
 logger = logging.getLogger(__name__)
 
@@ -180,3 +188,51 @@ def check_path_all(config: DictConfig) -> None:
         _check_path(config, 'demo.image_path')
     if config.demo.video_path:
         _check_path(config, 'demo.video_path')
+
+
+#for gaze_control function
+# download pre-trained models
+!aws s3 sync s3://deepcakedata/models/public/gaze_manipulation/GazeFlow_demo/ckpt ./ckpt
+# download pre-trained models for detect pytorch_mpiigaze_demo (dlib, models)
+!aws s3 sync s3://deepcakedata/models/public/gaze_manipulation/pytorch_mpiigaze_demo/ckpt ./.ptgaze
+package_root = Path(dcptgaze.__file__).parent.resolve()
+config = OmegaConf.load(f'{package_root}/ptgaze/data/configs/eth-xgaze.yaml')
+config.PACKAGE_ROOT = package_root.as_posix()
+# выбор используемого детектора в основном алгоритме: 
+#  fshdjpg (по умолчанию)
+#  dlib
+#  mediapipe
+#  face_alignment_dlib
+#  face_alignment_sfd
+
+config.face_detector.mode = 'fshdjpg'
+
+
+def gaze_control(image_path: str):
+    """Gaze direction calculation
+    Parameters
+    ----------
+    image_path: s3 path to fshdjpg image 
+    Returns
+    -------
+    gaze_pitch: vertical direction of view (up-down)
+    gaze_yaw: horizontal direction of view (left-right)
+    pose_pitch: vertical direction of the head relative to the pupil (up-down)
+    pose_yaw: horizontal direction of the head relative to the pupil (left-right)
+    """
+    input_filesystem, img_file_name = get_filesystem_from_path(image_path)
+    fs = fsspec.filesystem(input_filesystem)
+
+    if config.face_detector.mode == 'fshdjpg':
+        with fs.open(image_path) as f:
+            image = FSHDJPG.load_frombuffer(f.read())
+    else:
+        image = generate_presigned_url_from_path(s3_client=None, path=image_path)
+        image = io.imread(image)
+    
+    demo = Demo(config)
+    gaze_pitch, gaze_yaw, pose_pitch, pose_yaw = demo._process_image(image)
+    
+    gaze_pitch, gaze_yaw, pose_pitch, pose_yaw = gaze_pitch / 80, gaze_yaw / 80, pose_pitch / 80, pose_yaw / 80
+    
+    return round(gaze_pitch, 2), round(gaze_yaw, 2), round(pose_pitch, 2), round(pose_yaw, 2)
